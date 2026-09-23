@@ -1,0 +1,5 @@
+const test=require('node:test'),assert=require('node:assert/strict'),FrogAudio=require('../audio');
+function context(){const sources=[];const param=()=>({value:0,linearRampToValueAtTime(){},setValueAtTime(){},cancelScheduledValues(){}});return {sources,sampleRate:44100,currentTime:0,destination:{},resume(){},createBuffer(c,n,s){return {length:n,getChannelData:()=>new Float32Array(n)};},createGain(){return {gain:param(),connect(){},disconnect(){}};},createBufferSource(){const s={playbackRate:param(),connect(){},disconnect(){},start(){s.started=true;},stop(){s.stopped=true;}};sources.push(s);return s;}};}
+test('sliding replaces voice; stop silences; pitch bends follow frequency ratios',()=>{const c=context(),a=new FrogAudio(()=>c);a.start(440,0);const first=c.sources[0];assert.equal(first.started,true);assert.equal(first.loop,true);const rate=first.playbackRate.value;a.pitch(440,1200);assert.ok(Math.abs(first.playbackRate.value-2*rate)<1e-10);a.start(220,1);assert.equal(first.stopped,true);a.stop();assert.equal(c.sources[1].stopped,true);assert.equal(a.voice,null);a.stop();});
+
+

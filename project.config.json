@@ -1,0 +1,1 @@
+{"description":"呱唧 · 青蛙阿卡贝拉乐队","compileType":"game","appid":"touristappid","projectname":"guaji","setting":{"es6":true,"minified":true},"packOptions":{"ignore":[{"type":"folder","value":"tests"},{"type":"folder","value":"tools"}]}}
