@@ -1,3 +1,4 @@
 const Core=require('./core');
 const FrogAudio=require('./audio');
-require('./app')({Core,FrogAudio,wx});
+const BandSession=require('./session');
+require('./app')({Core,FrogAudio,BandSession,wx});
