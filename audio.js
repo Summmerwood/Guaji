@@ -6,8 +6,8 @@ class FrogAudio {
     this.voice = null;
     this.sample = null;
     this.buffers = [];
-    this.scheduled = Array.from({length: 7}, () => new Set());
-    // Leave mix headroom for seven parts and their release tails.
+    this.scheduled = Array.from({length: 5}, () => new Set());
+    // Leave mix headroom for five parts and their release tails.
     this.level = 0.08;
   }
   init() {
@@ -95,7 +95,7 @@ class FrogAudio {
   }
   stopAll() {
     this.stop();
-    for (let i = 0; i < 7; i++) this.stopTrack(i);
+    for (let i = 0; i < 5; i++) this.stopTrack(i);
   }
   async import(data) {
     const c = this.init();

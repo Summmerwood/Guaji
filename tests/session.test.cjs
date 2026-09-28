@@ -4,23 +4,24 @@ const {context}=require('./fake-audio.cjs');
 function setup(){const c=context(),audio=new Audio(()=>c),band=new Session(audio,Core);return {c,audio,band};}
 function record(c,band,track,key=0,length=1){band.record(track);c.currentTime+=.1;band.note(key,4);c.currentTime+=length;band.endNote();band.stop();}
 
-test('seven recordings are independent; every frog can sing different pitches',()=>{
+test('five recordings are independent; every frog can sing different pitches',()=>{
   const {c,band}=setup();
-  for(let i=0;i<7;i++)record(c,band,i,(i+2)%7);
-  assert.deepEqual(band.tracks.map(t=>t.length),[1,1,1,1,1,1,1]);
-  assert.deepEqual(band.tracks.map(t=>t[0].key),[2,3,4,5,6,0,1]);
+  for(let i=0;i<5;i++)record(c,band,i,(i+2)%7);
+  assert.deepEqual(band.tracks.map(t=>t.length),[1,1,1,1,1]);
+  assert.deepEqual(band.tracks.map(t=>t[0].key),[2,3,4,5,6]);
+  assert.deepEqual(band.tracks.map(t=>t[0].octave),[3,4,5,6,7]);
   const others=JSON.stringify(band.tracks.slice(1));
   record(c,band,0,6);
   assert.equal(JSON.stringify(band.tracks.slice(1)),others);
   assert.equal(band.tracks[0].length,1);
   assert.equal(band.tracks[0][0].key,6);
 });
-test('all seven voices queue against one epoch; deleting a part cancels only its current and future notes',()=>{
+test('all five voices queue against one epoch; deleting a part cancels only its current and future notes',()=>{
   const {c,audio,band}=setup();
   band.tracks.forEach(t=>t.push({key:0,octave:4,start:0,duration:1,bends:[]},{key:2,octave:4,start:2,duration:1,bends:[]}));
   assert.equal(band.play(),true);
   const voices=audio.scheduled.map(s=>[...s]);
-  assert.equal(voices.flat().length,14);
+  assert.equal(voices.flat().length,10);
   assert.ok(voices.every(v=>v[0].s.startTime===band.epoch&&v[1].s.startTime===band.epoch+2));
   c.currentTime=band.epoch+.3;
   band.clear(3);
@@ -48,8 +49,8 @@ test('overdubbing plays other parts while live notes and bends only affect selec
   band.clear(1);assert.equal(band.recording,-1);assert.equal(band.current,null);
 });
 test('recording toggle finalizes held note; 30-second limit clamps duration; global stop retains all tracks',()=>{
-  const {c,band,audio}=setup();band.record(6);c.currentTime=29;band.note(0,4);c.currentTime=31;
-  assert.equal(band.tick(),'recorded');assert.equal(band.tracks[6][0].duration,1);
+  const {c,band,audio}=setup();band.record(4);c.currentTime=29;band.note(0,4);c.currentTime=31;
+  assert.equal(band.tick(),'recorded');assert.equal(band.tracks[4][0].duration,1);
   band.record(0);c.currentTime+=.2;band.note(1,4);c.currentTime+=.4;
   assert.equal(band.record(0),false);assert.equal(band.tracks[0].length,1);
   const saved=JSON.stringify(band.tracks);band.play();band.stop();

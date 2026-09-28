@@ -1,16 +1,23 @@
 (function(root) {
-// A frog owns one independent part; all seven parts share one audio clock.
+// A frog owns one independent part; all five parts share one audio clock.
 class BandSession {
   constructor(audio, core) {
     this.audio = audio;
     this.core = core;
-    this.tracks = Array.from({length: 7}, () => []);
-    this.selected = 0;
+    this.tracks = Array.from({length: 5}, () => []);
+    this.selected = 1;
     this.recording = -1;
     this.playing = false;
     this.epoch = 0;
     this.current = null;
     this.limit = 30;
+  }
+  get octave() { return this.selected + 3; }
+  select(track) {
+    if (!Number.isInteger(track) || track < 0 || track >= this.tracks.length) return;
+    if (track !== this.selected && this.recording >= 0) this.stop();
+    else this.endNote();
+    this.selected = track;
   }
   get running() { return this.recording >= 0 || this.playing; }
   get elapsed() { return this.audio.ctx ? Math.max(0, this.audio.ctx.currentTime - this.epoch) : 0; }
@@ -60,7 +67,8 @@ class BandSession {
     else this.audio.stopTrack(track);
     this.tracks[track] = [];
   }
-  note(key, octave) {
+  note(key) {
+    const octave = this.octave;
     this.endNote();
     if (this.recording >= 0 && this.elapsed >= this.limit) { this.stop(); return; }
     this.audio.start(this.core.frequency(key, octave), this.selected);
@@ -69,7 +77,8 @@ class BandSession {
       this.tracks[this.recording].push(this.current);
     }
   }
-  pitch(key, octave, cents) {
+  pitch(key, ignoredOctave, cents) {
+    const octave = this.octave;
     this.audio.pitch(this.core.frequency(key, octave), cents);
     if (this.current) this.current.bends.push({at: Math.max(0, this.elapsed - this.current.start), value: cents});
   }
