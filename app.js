@@ -6,6 +6,11 @@ const info=isWX?wx.getWindowInfo():null;
 let W=isWX?info.windowWidth:Math.min(innerWidth,520),H=isWX?info.windowHeight:innerHeight,dpr=isWX?info.pixelRatio:devicePixelRatio;
 const audio=new Audio(()=>isWX?wx.createWebAudioContext():new (window.AudioContext||window.webkitAudioContext)());
 const band=new env.BandSession(audio,C);
+const frogAtlas=isWX?wx.createImage():new Image();
+let frogsReady=false;
+frogAtlas.onload=()=>{frogsReady=true;};
+frogAtlas.onerror=()=>{toast('青蛙图像加载失败，请刷新重试');};
+frogAtlas.src='assets/frogs-atlas.png';
 const colors=['#94b967','#bdd378','#7eb898','#d2c076','#83b6bb','#baa8ce','#dfac87'];
 const names=['呱队长','小豆','阿低','泡泡','咕咕','歪歪','大福'],sol=['do','re','mi','fa','sol','la','si'];
 let octave=4,key=-1,originY=0,bend=0,pointer=null,challenge=false,started=0,score=0,total=0,last=0,message='今天的池塘，也要有点动静。',messageUntil=0;
@@ -41,7 +46,7 @@ if(y>=l.ky&&y<l.ky+l.kh){
 if(band.playing){band.stop();endNote();}
 pointer=id;originY=y;note(C.keyAt(x,16,W-32),y);return;
 }
-if(y>=l.octY&&y<l.octY+35){endNote();octave=C.clamp(Math.floor((x-16)/((W-32)/11))-2,-2,8);return;}
+if(y>=l.octY&&y<l.octY+35){endNote();octave=C.clamp(Math.floor((x-16)/((W-32)/5))+3,3,7);return;}
 if(y>=l.trackY&&y<l.trackY+7*l.row&&x>=20&&x<W-20){
 const i=Math.floor((y-l.trackY)/l.row);
 if(x>=l.delX){
@@ -71,7 +76,17 @@ function move(x,y,id){if(pointer===id)note(C.keyAt(x,16,W-32),y);}
 function up(id){if(pointer===id){endNote();pointer=null;}}
 if(isWX){wx.onTouchStart(e=>{const t=e.changedTouches[0];down(t.clientX,t.clientY,t.identifier);});wx.onTouchMove(e=>{for(const t of e.changedTouches)move(t.clientX,t.clientY,t.identifier);});wx.onTouchEnd(e=>{for(const t of e.changedTouches)up(t.identifier);});wx.onTouchCancel(()=>{endNote();pointer=null;});wx.onHide(stop);wx.onWindowResize(e=>{stop();W=e.windowWidth;H=e.windowHeight;size();});}
 else{canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);const r=canvas.getBoundingClientRect();down(e.clientX-r.left,e.clientY-r.top,e.pointerId);});canvas.addEventListener('pointermove',e=>{const r=canvas.getBoundingClientRect();move(e.clientX-r.left,e.clientY-r.top,e.pointerId);});for(const type of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(type,e=>up(e.pointerId));window.addEventListener('blur',stop);document.addEventListener('visibilitychange',()=>{if(document.hidden)stop();});window.addEventListener('resize',()=>{stop();W=Math.min(innerWidth,520);H=innerHeight;size();});document.querySelector('#sample').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>10*1024*1024)throw Error('请选择小于 10 MB 的素材');await audio.import(await f.arrayBuffer());toast('原声已载入 · 基准音 C4');}catch(err){toast(err.message||'音频无法读取');}e.target.value='';});}
-function frog(i,x,y,s,t){const active=(key>=0&&band.selected===i)||!!band.eventAt(i),bob=active?Math.sin(t*22)*3:Math.sin(t*2+i)*2;ctx.save();ctx.translate(x,y+bob);ellipse(0,23*s,30*s,7*s,'#d0d8b5');ellipse(0,3*s,27*s,29*s,colors[i]);ellipse(-15*s,-19*s,12*s,12*s,colors[i]);ellipse(15*s,-19*s,12*s,12*s,colors[i]);for(const a of [-15,15]){ellipse(a*s,-20*s,8*s,9*s,'#fffce9');ellipse((a+1)*s,-19*s,3*s,4*s,'#233d31');}ellipse(-19*s,1*s,5*s,3*s,'#e9a88b');ellipse(19*s,1*s,5*s,3*s,'#e9a88b');ellipse(0,10*s,(active?10:7)*s,(active?10+Math.sin(t*28)*3:2)*s,'#29473c');if(active){ellipse(0,16*s,5*s,3*s,'#efac97');text('♪',29*s,-24*s,21,'#567245');}if(i===0){round(-9*s,-6*s,18*s,5*s,2,'#29473c');}ctx.restore();text(names[i],x,y+44*s,10,band.selected===i?'#29493c':'#778466','center',band.selected===i?'bold':'normal');}
+function frog(i,x,y,s,t){
+const active=(key>=0&&band.selected===i)||!!band.eventAt(i);
+const bob=active?Math.sin(t*22)*2:Math.sin(t*2+i);
+const width=78*s,height=width*(frogAtlas.height/2)/(frogAtlas.width/7);
+if(frogsReady){
+const cellW=frogAtlas.width/7,cellH=frogAtlas.height/2;
+ctx.drawImage(frogAtlas,i*cellW,active?cellH:0,cellW,cellH,x-width/2,y-38*s+bob,width,height);
+}else{ellipse(x,y,24*s,20*s,colors[i]);}
+if(active)text('♪',x+35*s,y-22*s,16,'#567245');
+text(names[i],x,y+65*s,10,band.selected===i?'#29493c':'#778466','center',band.selected===i?'bold':'normal');
+}
 function frame(){const now=clock(),dt=Math.min(now-last,.05);last=now;const l=layout(),elapsed=now-started;
 const finished=band.tick();
 if(finished){key=-1;bend=0;pointer=null;toast(finished==='recorded'?'30 秒声部已保存':'演出完毕，池塘掌声响起来！');}
@@ -114,10 +129,11 @@ else{const back=i<3,j=back?i:i-3,count=back?3:4;frog(i,W*(j+1)/(count+1),stageTo
 }
 text(now<messageUntil?message:(key>=0?names[band.selected]+'：'+sol[key]+' ～  '+Math.round(bend)+' cents':'当前 '+names[band.selected]+' · 长按滑奏 / 上下颤音'),W/2,l.ky-13,11,'#63744f','center');
 const kw=(W-32)/7;for(let i=0;i<7;i++){const active=key===i;round(16+i*kw,l.ky,kw-3,l.kh,10,active?colors[i]:'#fffdf0','#d5dac2');round(16+i*kw,l.ky,kw-3,5,2,colors[i]);text(String(i+1),16+i*kw+(kw-3)/2,l.ky+l.kh*.47,22,active?'#253e30':'#425b42','center','bold');text(sol[i],16+i*kw+(kw-3)/2,l.ky+l.kh*.74,11,'#748165','center');}
-text('音区',19,l.octY-8,9,'#778466');text('C4 = 中央 C',W-20,l.octY-8,9,'#778466','right');const ow=(W-32)/11;for(let i=0;i<11;i++){round(16+i*ow,l.octY,ow-2,31,6,octave===i-2?'#344e3c':'#e1e5ce');text('C'+(i-2>0?'+':'')+(i-2),16+i*ow+(ow-2)/2,l.octY+20,9,octave===i-2?'#f5f4dd':'#778466','center');}text('不必完美，呱得开心。',W/2,H-13,9,'#899478','center');
+text('音区',19,l.octY-8,9,'#778466');text('C4 = 中央 C',W-20,l.octY-8,9,'#778466','right');const ow=(W-32)/5;for(let i=0;i<5;i++){const register=i+3;round(16+i*ow,l.octY,ow-3,31,6,octave===register?'#344e3c':'#e1e5ce');text('C+'+register,16+i*ow+(ow-3)/2,l.octY+20,11,octave===register?'#f5f4dd':'#778466','center');}text('不必完美，呱得开心。',W/2,H-13,9,'#899478','center');
 (isWX?requestAnimationFrame:window.requestAnimationFrame)(frame);}
 frame();
 }
 if(typeof module!=='undefined')module.exports=boot;else boot({Core:root.GuajiCore,FrogAudio:root.FrogAudio,BandSession:root.BandSession});
 })(typeof globalThis!=='undefined'?globalThis:this);
+
 
